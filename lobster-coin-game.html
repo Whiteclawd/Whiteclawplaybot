@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🦞 Lobster Putih - Kumpul Koin!</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap');
+
+  :root {
+    --ocean-deep: #0a1628;
+    --ocean-mid: #0d2240;
+    --ocean-light: #1a3a5c;
+    --ocean-glow: #1e5f8e;
+    --coin-gold: #FFD700;
+    --coin-shine: #FFF176;
+    --lobster-white: #F0F8FF;
+    --lobster-pink: #FFB6C1;
+    --bubble: rgba(100, 200, 255, 0.3);
+    --ui-bg: rgba(10, 22, 40, 0.9);
+    --accent: #00E5FF;
+    --accent2: #64FFDA;
+    --score-glow: #FFD700;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--ocean-deep);
+    font-family: 'Nunito', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  #game-wrapper {
+    position: relative;
+    width: 400px;
+    height: 700px;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 0 60px rgba(0, 229, 255, 0.25), 0 0 120px rgba(0, 100, 255, 0.1);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+  }
+
+  #game-canvas {
+    display: block;
+    width: 400px;
+    height: 700px;
+    background: linear-gradient(180deg, #041020 0%, #0a1f3d 30%, #0d2a50 60%, #0a1f3d 100%);
+  }
+
+  /* === UI OVERLAY === */
+  #ui-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 20px 20px 0;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .score-box {
+    background: var(--ui-bg);
+    border: 1px solid rgba(0,229,255,0.3);
+    border-radius: 16px;
+    padding: 8px 16px;
+    backdrop-filter: blur(10px);
+  }
+
+  .score-label {
+    font-family: 'Fredoka One', cursive;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: block;
+  }
+
+  .score-value {
+    font-family: 'Fredoka One', cursive;
+    font-size: 28px;
+    color: var(--coin-gold);
+    text-shadow: 0 0 15px rgba(255,215,0,0.6);
+    display: block;
+    line-height: 1;
+  }
+
+  #lives-box {
+    display: flex;
+    gap: 4px;
+    background: var(--ui-bg);
+    border: 1px solid rgba(0,229,255,0.3);
+    border-radius: 16px;
+    padding: 8px 12px;
+    backdrop-filter: blur(10px);
+    align-items: center;
+  }
+
+  .heart { font-size: 18px; transition: transform 0.3s; }
+  .heart.lost { filter: grayscale(1); opacity: 0.3; }
+
+  /* === SCREENS === */
+  .screen {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    background: linear-gradient(180deg, rgba(4,16,32,0.97) 0%, rgba(10,31,61,0.97) 100%);
+    backdrop-filter: blur(4px);
+  }
+
+  .screen.hidden { display: none; }
+
+  .game-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 42px;
+    color: white;
+    text-align: center;
+    text-shadow: 0 0 30px var(--accent), 0 4px 0 rgba(0,0,0,0.5);
+    line-height: 1.1;
+    margin-bottom: 8px;
+  }
+
+  .game-subtitle {
+    font-family: 'Nunito', sans-serif;
+    font-size: 16px;
+    color: var(--accent);
+    text-align: center;
+    margin-bottom: 40px;
+    opacity: 0.8;
+  }
+
+  /* Big lobster emoji for title screen */
+  .title-lobster {
+    font-size: 90px;
+    margin-bottom: 20px;
+    animation: float 2.5s ease-in-out infinite;
+    filter: drop-shadow(0 10px 30px rgba(0, 229, 255, 0.4));
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0) rotate(-3deg); }
+    50% { transform: translateY(-15px) rotate(3deg); }
+  }
+
+  .btn {
+    font-family: 'Fredoka One', cursive;
+    font-size: 22px;
+    padding: 16px 48px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+    pointer-events: all;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #0096b4);
+    color: white;
+    box-shadow: 0 8px 30px rgba(0,229,255,0.4), 0 2px 0 rgba(0,0,0,0.3);
+  }
+
+  .btn-primary:hover { transform: translateY(-2px) scale(1.03); }
+  .btn-primary:active { transform: translateY(1px) scale(0.97); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+    margin-top: 12px;
+    font-size: 18px;
+    padding: 12px 36px;
+  }
+
+  .how-to {
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 280px;
+  }
+
+  .how-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(0,229,255,0.07);
+    border-radius: 12px;
+    padding: 10px 14px;
+    border: 1px solid rgba(0,229,255,0.15);
+  }
+
+  .how-icon { font-size: 22px; }
+
+  .how-text {
+    font-size: 13px;
+    color: rgba(255,255,255,0.8);
+    line-height: 1.3;
+  }
+
+  /* Over screen */
+  .over-result {
+    font-family: 'Fredoka One', cursive;
+    font-size: 60px;
+    color: var(--coin-gold);
+    text-shadow: 0 0 30px rgba(255,215,0,0.5);
+    margin: 12px 0;
+  }
+
+  .over-label {
+    font-size: 14px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .high-score-badge {
+    font-family: 'Fredoka One', cursive;
+    font-size: 16px;
+    color: var(--accent2);
+    background: rgba(100,255,218,0.1);
+    border: 1px solid var(--accent2);
+    border-radius: 20px;
+    padding: 4px 16px;
+    margin-bottom: 30px;
+  }
+
+  /* Controls hint */
+  #controls-hint {
+    position: absolute;
+    bottom: 20px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 12px;
+    color: rgba(255,255,255,0.3);
+    pointer-events: none;
+    z-index: 5;
+    font-family: 'Nunito', sans-serif;
+  }
+
+  /* Combo flash */
+  #combo-display {
+    position: absolute;
+    top: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 15;
+    pointer-events: none;
+    font-family: 'Fredoka One', cursive;
+    font-size: 28px;
+    color: var(--coin-gold);
+    text-shadow: 0 0 20px rgba(255,215,0,0.8);
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+  }
+
+  #combo-display.show {
+    opacity: 1;
+    animation: comboAnim 0.8s forwards;
+  }
+
+  @keyframes comboAnim {
+    0% { transform: translateX(-50%) scale(0.5); opacity: 1; }
+    40% { transform: translateX(-50%) scale(1.2); opacity: 1; }
+    100% { transform: translateX(-50%) scale(1); opacity: 0; }
+  }
+
+  /* Ripple particles (CSS) */
+  .particle {
+    position: absolute;
+    pointer-events: none;
+    border-radius: 50%;
+    animation: particleFade 0.6s forwards;
+    z-index: 12;
+  }
+  @keyframes particleFade {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(2.5); opacity: 0; }
+  }
+
+  @media (max-width: 440px) {
+    #game-wrapper { width: 100vw; height: 100vh; border-radius: 0; }
+    #game-canvas { width: 100vw; height: 100vh; }
+  }
+</style>
+</head>
+<body>
+
+<div id="game-wrapper">
+  <canvas id="game-canvas" width="400" height="700"></canvas>
+
+  <!-- UI -->
+  <div id="ui-overlay">
+    <div class="score-box">
+      <span class="score-label">🪙 Koin</span>
+      <span class="score-value" id="score-display">0</span>
+    </div>
+    <div id="lives-box">
+      <span class="heart" id="h1">❤️</span>
+      <span class="heart" id="h2">❤️</span>
+      <span class="heart" id="h3">❤️</span>
+    </div>
+  </div>
+
+  <div id="combo-display"></div>
+
+  <!-- Start Screen -->
+  <div class="screen" id="start-screen">
+    <div class="title-lobster">🦞</div>
+    <div class="game-title">Lobster<br>Koin!</div>
+    <div class="game-subtitle">Kumpulkan semua koin di lautan dalam!</div>
+    <div class="how-to">
+      <div class="how-item">
+        <span class="how-icon">👆</span>
+        <span class="how-text">Tap / klik untuk bergerak kiri & kanan</span>
+      </div>
+      <div class="how-item">
+        <span class="how-icon">🪙</span>
+        <span class="how-text">Kumpulkan koin emas, hindari bom!</span>
+      </div>
+      <div class="how-item">
+        <span class="how-icon">✨</span>
+        <span class="how-text">Combo koin = bonus poin berlipat!</span>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="startGame()">🎮 Mulai Main!</button>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div class="screen hidden" id="over-screen">
+    <div class="title-lobster" style="font-size:70px; margin-bottom:10px;">😵</div>
+    <div class="game-title" style="font-size:34px;">Game Over!</div>
+    <div class="over-label">Skor Kamu</div>
+    <div class="over-result" id="final-score">0</div>
+    <div class="high-score-badge" id="hs-badge">🏆 Best: 0</div>
+    <button class="btn btn-primary" onclick="startGame()">🔄 Main Lagi!</button>
+    <button class="btn btn-secondary" onclick="showStart()">🏠 Menu</button>
+  </div>
+
+  <div id="controls-hint">Tap kiri/kanan layar untuk gerak</div>
+</div>
+
+<script>
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+// ─── STATE ───
+let state = 'idle'; // idle | playing | over
+let score = 0, highScore = 0, lives = 3, combo = 0, comboTimer = 0;
+let frame = 0, speed = 2, spawnRate = 80;
+let items = [], bubbles = [], particles = [];
+let lobster = { x: W/2, y: H - 130, w: 60, h: 60, vx: 0, targetX: W/2, moving: false };
+let bgStars = [];
+
+// ─── INIT BG ───
+for (let i = 0; i < 60; i++) {
+  bgStars.push({
+    x: Math.random() * W,
+    y: Math.random() * H,
+    r: Math.random() * 1.5 + 0.3,
+    alpha: Math.random() * 0.5 + 0.1,
+    speed: Math.random() * 0.4 + 0.1
+  });
+}
+
+// ─── INPUT ───
+let touchTarget = null;
+
+canvas.addEventListener('click', handleInput);
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  handleInput({ clientX: t.clientX });
+}, { passive: false });
+
+document.addEventListener('keydown', e => {
+  if (state !== 'playing') return;
+  if (e.key === 'ArrowLeft' || e.key === 'a') lobster.targetX = Math.max(40, lobster.x - 80);
+  if (e.key === 'ArrowRight' || e.key === 'd') lobster.targetX = Math.min(W - 40, lobster.x + 80);
+});
+
+function handleInput(e) {
+  if (state !== 'playing') return;
+  const rect = canvas.getBoundingClientRect();
+  const cx = (e.clientX - rect.left) * (W / rect.width);
+  if (cx < W / 2) {
+    lobster.targetX = Math.max(40, lobster.x - 90);
+  } else {
+    lobster.targetX = Math.min(W - 40, lobster.x + 90);
+  }
+}
+
+// ─── ITEM TYPES ───
+const ITEM_TYPES = [
+  { type: 'coin',   emoji: '🪙', value: 10,  r: 18, chance: 0.55 },
+  { type: 'gem',    emoji: '💎', value: 30,  r: 18, chance: 0.15 },
+  { type: 'star',   emoji: '⭐', value: 20,  r: 18, chance: 0.12 },
+  { type: 'bomb',   emoji: '💣', value: -1,  r: 20, chance: 0.12 },
+  { type: 'shield', emoji: '🛡️', value: 0,   r: 18, chance: 0.06 },
+];
+
+function spawnItem() {
+  const roll = Math.random();
+  let cumul = 0;
+  let chosen = ITEM_TYPES[0];
+  for (const t of ITEM_TYPES) {
+    cumul += t.chance;
+    if (roll < cumul) { chosen = t; break; }
+  }
+  items.push({
+    ...chosen,
+    x: Math.random() * (W - 60) + 30,
+    y: -30,
+    vy: speed + Math.random() * 1.5,
+    rot: 0, rotSpeed: (Math.random() - 0.5) * 0.12,
+    wobble: Math.random() * Math.PI * 2
+  });
+}
+
+function spawnBubble() {
+  bubbles.push({
+    x: Math.random() * W,
+    y: H + 20,
+    r: Math.random() * 14 + 5,
+    vy: -(Math.random() * 1.5 + 0.5),
+    alpha: Math.random() * 0.3 + 0.05
+  });
+}
+
+// ─── DRAWING HELPERS ───
+function drawBg() {
+  // Ocean gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#020d1a');
+  grad.addColorStop(0.5, '#0a1f3d');
+  grad.addColorStop(1, '#0d2a50');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle grid / caustics lines
+  ctx.strokeStyle = 'rgba(0, 180, 255, 0.04)';
+  ctx.lineWidth = 1;
+  for (let y = 0; y < H; y += 50) {
+    ctx.beginPath(); ctx.moveTo(0, y + (frame * 0.3 % 50)); ctx.lineTo(W, y + (frame * 0.3 % 50)); ctx.stroke();
+  }
+
+  // Stars / plankton
+  for (const s of bgStars) {
+    s.y += s.speed;
+    if (s.y > H) s.y = 0;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(150, 220, 255, ${s.alpha})`;
+    ctx.fill();
+  }
+
+  // Bottom sand
+  const sandGrad = ctx.createLinearGradient(0, H - 60, 0, H);
+  sandGrad.addColorStop(0, 'rgba(10, 50, 90, 0)');
+  sandGrad.addColorStop(1, 'rgba(15, 60, 110, 0.8)');
+  ctx.fillStyle = sandGrad;
+  ctx.fillRect(0, H - 60, W, 60);
+}
+
+function drawBubbles() {
+  for (let i = bubbles.length - 1; i >= 0; i--) {
+    const b = bubbles[i];
+    b.y += b.vy;
+    b.alpha -= 0.0008;
+    if (b.y < -20 || b.alpha <= 0) { bubbles.splice(i, 1); continue; }
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(100, 200, 255, ${b.alpha})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Highlight
+    ctx.beginPath();
+    ctx.arc(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.25, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(200, 240, 255, ${b.alpha * 0.8})`;
+    ctx.fill();
+  }
+}
+
+function drawLobster() {
+  const lx = lobster.x, ly = lobster.y;
+  const bobY = Math.sin(frame * 0.07) * 4;
+  const tiltX = (lobster.targetX - lx) * 0.03;
+
+  ctx.save();
+  ctx.translate(lx, ly + bobY);
+  ctx.rotate(tiltX * 0.15);
+
+  // Glow
+  const glowGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, 50);
+  glowGrad.addColorStop(0, 'rgba(200, 240, 255, 0.3)');
+  glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = glowGrad;
+  ctx.fillRect(-50, -50, 100, 100);
+
+  // Draw emoji lobster big
+  ctx.font = `${lobster.h}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  // Shadow
+  ctx.shadowColor = 'rgba(0, 229, 255, 0.6)';
+  ctx.shadowBlur = 20;
+  ctx.fillText('🦞', 0, 0);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+function drawItem(item) {
+  item.wobble += 0.05;
+  item.rot += item.rotSpeed;
+  ctx.save();
+  ctx.translate(item.x + Math.sin(item.wobble) * 3, item.y);
+  ctx.rotate(item.rot);
+
+  if (item.type === 'coin') {
+    // Custom coin draw
+    const cg = ctx.createRadialGradient(-4, -4, 2, 0, 0, item.r);
+    cg.addColorStop(0, '#FFF9C4');
+    cg.addColorStop(0.5, '#FFD700');
+    cg.addColorStop(1, '#B8860B');
+    ctx.beginPath();
+    ctx.ellipse(0, 0, item.r * Math.abs(Math.cos(item.wobble * 2)) + 4, item.r, 0, 0, Math.PI * 2);
+    ctx.fillStyle = cg;
+    ctx.shadowColor = '#FFD700';
+    ctx.shadowBlur = 15;
+    ctx.fill();
+    ctx.strokeStyle = '#B8860B';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.font = 'bold 12px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('₿', 0, 0);
+  } else {
+    ctx.font = `${item.r * 1.6}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (item.type === 'gem') {
+      ctx.shadowColor = '#00E5FF'; ctx.shadowBlur = 20;
+    } else if (item.type === 'bomb') {
+      ctx.shadowColor = '#FF4444'; ctx.shadowBlur = 15;
+    } else if (item.type === 'star') {
+      ctx.shadowColor = '#FFD700'; ctx.shadowBlur = 18;
+    } else if (item.type === 'shield') {
+      ctx.shadowColor = '#64FFDA'; ctx.shadowBlur = 18;
+    }
+    ctx.fillText(item.emoji, 0, 0);
+    ctx.shadowBlur = 0;
+  }
+  ctx.restore();
+}
+
+function drawParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.life--;
+    p.alpha = p.life / p.maxLife;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * p.alpha, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${p.color}, ${p.alpha})`;
+    ctx.fill();
+  }
+}
+
+function spawnCollectParticles(x, y, color) {
+  for (let i = 0; i < 10; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 4 + 1;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 3,
+      r: Math.random() * 5 + 2,
+      color, life: 25, maxLife: 25, alpha: 1
+    });
+  }
+}
+
+// ─── COLLISION ───
+function checkCollisions() {
+  for (let i = items.length - 1; i >= 0; i--) {
+    const it = items[i];
+    const dx = it.x - lobster.x;
+    const dy = it.y - lobster.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist < it.r + 28) {
+      items.splice(i, 1);
+      if (it.type === 'bomb') {
+        if (lives > 0) lives--;
+        updateLives();
+        shakeCanvas();
+        spawnCollectParticles(it.x, it.y, '255,80,80');
+        combo = 0;
+        if (lives <= 0) endGame();
+      } else {
+        combo++;
+        comboTimer = 90;
+        const mult = Math.min(combo, 5);
+        const gained = it.value * mult;
+        score += gained;
+        updateScore();
+        if (it.type === 'shield') { lives = Math.min(3, lives + 1); updateLives(); }
+        spawnCollectParticles(it.x, it.y, it.type === 'gem' ? '0,229,255' : it.type === 'star' ? '255,220,0' : '255,215,0');
+        showCombo(combo, gained);
+      }
+    } else if (it.y > H + 40) {
+      items.splice(i, 1);
+      if (it.type !== 'bomb') {
+        combo = 0; // missed coin resets combo
+      }
+    }
+  }
+}
+
+let shakeAmount = 0;
+function shakeCanvas() { shakeAmount = 12; }
+
+function showCombo(c, gained) {
+  const el = document.getElementById('combo-display');
+  if (c >= 3) {
+    el.textContent = c >= 5 ? `🔥 x${c} COMBO! +${gained}` : `⚡ x${c} COMBO! +${gained}`;
+  } else {
+    el.textContent = `+${gained}`;
+  }
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+}
+
+// ─── SCORE / LIVES UI ───
+function updateScore() {
+  document.getElementById('score-display').textContent = score;
+}
+function updateLives() {
+  const hearts = ['h1','h2','h3'];
+  hearts.forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.classList.toggle('lost', i >= lives);
+  });
+}
+
+// ─── GAME LOOP ───
+let raf;
+function loop() {
+  frame++;
+
+  // Spawn
+  if (frame % Math.max(30, spawnRate - Math.floor(score / 200)) === 0) spawnItem();
+  if (frame % 12 === 0) spawnBubble();
+
+  // Speed up
+  speed = 2 + score / 600;
+
+  // Combo timer
+  if (comboTimer > 0) comboTimer--;
+  else if (comboTimer === 0 && combo > 0) combo = 0;
+
+  // Lobster movement
+  lobster.vx = (lobster.targetX - lobster.x) * 0.18;
+  lobster.x += lobster.vx;
+  lobster.x = Math.max(35, Math.min(W - 35, lobster.x));
+
+  // Items fall
+  for (const it of items) { it.y += it.vy * (speed / 2.2); }
+
+  // Shake
+  let ox = 0, oy = 0;
+  if (shakeAmount > 0) {
+    ox = (Math.random() - 0.5) * shakeAmount;
+    oy = (Math.random() - 0.5) * shakeAmount;
+    shakeAmount *= 0.8;
+    if (shakeAmount < 0.5) shakeAmount = 0;
+  }
+
+  ctx.save();
+  ctx.translate(ox, oy);
+  drawBg();
+  drawBubbles();
+  for (const it of items) drawItem(it);
+  drawLobster();
+  drawParticles();
+  ctx.restore();
+
+  checkCollisions();
+
+  raf = requestAnimationFrame(loop);
+}
+
+// ─── GAME CONTROL ───
+function startGame() {
+  score = 0; lives = 3; combo = 0; comboTimer = 0;
+  frame = 0; speed = 2; items = []; bubbles = []; particles = [];
+  lobster.x = W/2; lobster.targetX = W/2;
+  state = 'playing';
+  updateScore(); updateLives();
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('over-screen').classList.add('hidden');
+  cancelAnimationFrame(raf);
+  loop();
+}
+
+function endGame() {
+  state = 'over';
+  cancelAnimationFrame(raf);
+  if (score > highScore) highScore = score;
+  document.getElementById('final-score').textContent = score;
+  document.getElementById('hs-badge').textContent = `🏆 Best: ${highScore}`;
+  document.getElementById('over-screen').classList.remove('hidden');
+}
+
+function showStart() {
+  cancelAnimationFrame(raf);
+  state = 'idle';
+  document.getElementById('over-screen').classList.add('hidden');
+  document.getElementById('start-screen').classList.remove('hidden');
+}
+
+// Draw idle bg on start
+(function idleLoop() {
+  if (state !== 'idle') return;
+  frame++;
+  drawBg();
+  drawBubbles();
+  if (frame % 12 === 0) spawnBubble();
+  requestAnimationFrame(idleLoop);
+})();
+</script>
+</body>
+</html>
